@@ -505,7 +505,7 @@ methods as:
 
 ```{r mutate-modern-use}
 dhs <- dhs %>%
-  mutate(modern_use = ifelse(contraceptive == 3, 1, 0))
+  mutate(modern_use = ifelse(contraceptive == "modern method", "yes", "no"))
 
 head(dhs$modern_use)
 ```
@@ -517,7 +517,7 @@ media source:
 dhs <- dhs %>%
   mutate(
     media_exposure = ifelse(
-      reads_newspaper > 0 | listens_radio > 0 | watches_tv > 0,
+      reads_newspaper != "not at all"  | listens_radio != "not at all" | watches_tv != "not at all",
       "Yes", "No"
     )
   )
@@ -574,20 +574,20 @@ data %>% filter(condition)
 women_15_49 <- dhs %>% filter(age >= 15 & age <= 49)
 
 # Rural women
-rural <- dhs %>% filter(residence == 2)
+rural <- dhs %>% filter(residence == "rural")
 
 # Urban women
-urban <- dhs %>% filter(residence == 1)
+urban <- dhs %>% filter(residence == "urban")
 
 # Married women
-married <- dhs %>% filter(marital_status == 1)
+married <- dhs %>% filter(marital_status == "married")
 
 # Women using a modern contraceptive method
-users <- dhs %>% filter(modern_use == 1)
+users <- dhs %>% filter(modern_use == "yes")
 
 # Multiple conditions at once: rural, secondary+ education, modern users
 subset_data <- dhs %>%
-  filter(residence == 2, education >= 2, modern_use == 1)
+  filter(residence == 'ubarn', education %in%  c("secondary", "higher"), modern_use == "yes")
 
 nrow(women_15_49); nrow(rural); nrow(urban); nrow(married); nrow(users); nrow(subset_data)
 ```
@@ -638,10 +638,8 @@ analysis_data <- dhs_raw %>%
                     age >= 35 & age <= 49 ~ "35-49",
                     TRUE ~ NA_character_),
                     levels = c("15-19", "20-34", "35-49")),
-    modern_use     = ifelse(contraceptive == 3, 1, 0),
-    media_exposure = ifelse(reads_newspaper > 0 | listens_radio > 0 |
-                               watches_tv > 0, "Yes", "No")
-  ) %>%
+    modern_use     = ifelse(contraceptive == "modern method","yes", "no"),
+    media_exposure = ifelse(reads_newspaper != "not at all"  | listens_radio != "not at all" | watches_tv != "not at all", "Yes", "No")) %>%
   filter(is.na(living_children) |
            !(living_children < lower_bound | living_children > upper_bound)) %>%
   filter(age >= 15 & age <= 49) %>%
