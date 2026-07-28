@@ -1,0 +1,805 @@
+---
+title: "Webinar 1 -- R for Data Management"
+author: "Frank Namugera (PhD)"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: journal
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Introduction
+
+This R Markdown file is the **live-coding companion** to Webinar 1. It follows
+the session agenda below and uses a real **Malawi Demographic and Health
+Survey (MDHS)** Individual Recode (women's) file throughout, so every function
+is demonstrated on genuine survey data rather than a toy example.
+
+## Session Setup
+### 1. Install R
+
+Download R from:
+
+https://cran.r-project.org/
+
+Steps:
+- Select your operating system (Windows/macOS/Linux).
+- Download and install the latest version.
+- Accept the default installation settings.
+
+---
+
+### 2. Install RStudio
+
+Download RStudio Desktop from:
+
+https://posit.co/download/rstudio-desktop/
+
+Steps:
+- Install RStudio after installing R.
+- Open RStudio and confirm that R is detected.
+
+## Research Focus
+
+**Determinants of Modern Contraceptive Use among Women Aged 15--49 Years**
+
+Modern contraceptive use is a key indicator of reproductive health and is
+essential for reducing unintended pregnancies, improving maternal and child
+health outcomes, and supporting sustainable population growth. Using data
+from the Malawi DHS, this session examines the determinants of modern
+contraceptive use among women aged 15--49, and how it varies by age,
+education, marital status, wealth, place of residence, region, employment,
+media exposure, and number of living children.
+
+If you have downloaded your own DHS extract (`.dta` or `.sav`) from the
+[DHS Program website](https://dhsprogram.com/data/available-datasets.cfm),
+point `file_path` in the import step below to it.
+
+**Tip:** DHS data requires free registration and project approval before
+download -- start that process early if you plan to use your own country's
+data.
+
+---
+
+# R & RStudio Basics
+
+## How R Works
+
+R has a set of methods and functions designed and packaged into libraries.
+For every programming task, you need to know the appropriate functions and
+packages to install and use; where a ready-made function doesn't exist, you
+can write your own (a "user-defined function").
+
+RStudio is the IDE used to manage your datasets, scripts, and visualizations
+in one place.
+
+## Creating and Managing an R Project
+
+### Step 1: Create a New Project
+
+- Open **RStudio**
+- Go to **File -> New Project**
+- Select **New Directory -> New Project**
+- Enter a project name and choose a location
+- Click **Create Project**
+
+### Step 2: Organize Your Project
+
+Create folders to keep your work organized:
+
+```
+Project_Name/
+|
+|-- data/
+|-- scripts/
+|-- figures/
+|-- output/
+|-- reports/
+`-- Project_Name.Rproj
+```
+
+## Good Practices
+
+- Use one project per analysis
+- Organize files into folders
+- Use relative file paths instead of hard-coded `setwd()` calls
+- Save your work regularly
+- Keep raw and cleaned data separate
+
+## Basic R Operations
+
+R can handle everything from simple arithmetic to full statistical models.
+We will build up to the DHS analysis gradually, starting with the basics:
+
+```{r assignment}
+## the assignment operator
+a <- 2
+b <- 5:10
+c <- c("a", "b", "d")
+```
+
+## Loading Required Packages
+
+```{r packages}
+# install.packages(c("tidyverse", "haven", "readxl", "labelled"))
+
+library(tidyverse)   # dplyr, ggplot2, tidyr, stringr, etc.
+library(haven)       # read Stata (.dta) / SPSS (.sav) files -- standard DHS formats
+library(readxl)      # read Excel files
+library(labelled)    # helper functions for labelled survey data
+```
+
+```{r working-directory}
+# Check and, if needed, set your working directory
+getwd()
+# setwd("path/to/your/project")
+```
+
+---
+
+# Importing and Inspecting Data
+
+## Supported Data Formats
+
+R can read data from many formats, including `.csv`, `.xlsx`, `.sav`, `.dta`,
+`.R`/`.RData`, and more. This session focuses on `.dta` (Stata format), since
+that is how the Malawi DHS Individual Recode file is distributed.
+
+## Importing the DHS Dataset
+
+DHS data comes **already value-labelled**: every categorical variable (e.g.,
+`v025` place of residence, `v106` education) carries its numeric code *and*
+a text label at the same time, via haven's `labelled` class. We keep both
+together rather than converting everything to plain factors on import --
+that way we still have the numeric codes available for `na_if()` and other
+numeric checks, but can pull in the ready-made labels with `as_factor()`
+whenever we want them (shown in **Working with Categorical Variables**
+below).
+
+```{r import-real}
+# Update this path to point to your own DHS extract
+file_path_dta <- "C:/Users/FRANK/Desktop/R training/DHS_data.dta" 
+file_path_csv<- "C:/Users/FRANK/Desktop/R training/DHS_data.csv"
+
+dhs_data <- read_dta(file_path_dta)%>%
+  mutate(across(where(is.labelled), as_factor))  ### haven and convert values to value labels.
+```
+
+> **Note:** we deliberately do *not* run
+> `mutate(across(where(is.labelled), as_factor))` here. Doing so immediately
+> would turn every categorical column into text labels straight away, which
+> would break the numeric missing-value recoding (`na_if(education, 9)`,
+> etc.) later in the Data Cleaning section. Converting variable-by-variable,
+> only when we actually need the label, keeps both options available.
+
+## Selecting Variables of Interest
+
+```{r variable-selection}
+var_names <- c(
+  "caseid", # case id
+  "v005",   # sampling weight
+  "v021",   # primary sampling unit (cluster)
+  "v022",   # sampling strata
+  "v024",   # region
+  "v025",   # place of residence
+  "v012",   # age
+  "v106",   # highest education level
+  "v130",   # religion
+  "v190",   # wealth index
+  "v201",   # children ever born
+  "v218",   # number of living children
+  "v213",   # currently pregnant
+  "v312",   # current contraceptive method
+  "v313",   # current contraceptive method type
+  "v501",   # marital status
+  "v714",   # currently working
+  "v717",   # respondent's occupation
+  "v701",   # husband's education
+  "v705",   # husband's occupation
+  "v157",   # reads newspaper
+  "v158",   # listens to radio
+  "v159",   # watches television
+  "v394",   # visited health facility
+  "v481"    # health insurance coverage
+)
+
+dhs_raw <- dhs_data %>% select(all_of(var_names))
+```
+
+`v005`, `v021`, and `v022` (the sampling weight, cluster, and strata) are not
+used in this session's basic descriptive analysis, but we keep them selected
+now -- they're needed for **survey-weighted analysis**, which is previewed in
+Webinar 2.
+
+## First Look at the Data
+
+```{r inspect}
+dim(dhs_raw)
+head(dhs_raw)
+str(dhs_raw)
+glimpse(dhs_raw)
+summary(dhs_raw)
+```
+
+### Inspecting the Embedded Value Labels
+
+Since this data comes already value-labelled, it's worth checking what
+labels each variable actually carries *before* deciding how to recode it --
+this tells us whether we can use `as_factor()` directly, or whether we still
+need to define labels ourselves.
+
+```{r inspect-labels}
+# Quick look at two key variables
+val_labels(dhs_raw$v025)
+val_labels(dhs_raw$v106)
+
+# A full data-dictionary-style overview of every variable at once
+# look_for(dhs_raw)
+```
+
+---
+
+# Data Cleaning -- Part 1
+
+## Objectives
+
+By the end of this segment, participants should be able to:
+
+- Rename variables
+- Identify and handle missing values
+- Detect and remove duplicate records
+- Recode variables
+- Work with categorical variables
+- Detect and handle outliers
+
+## Renaming Variables
+
+DHS datasets use standardized variable names (e.g., `v012`, `v106`). Renaming
+them up front makes every subsequent step easier to read.
+
+```{r rename}
+dhs <- dhs_raw %>%
+  rename(
+    age                     = v012,
+    region                  = v024,
+    residence               = v025,
+    education               = v106,
+    religion                = v130,
+    wealth_quintile         = v190,
+    children_ever_born      = v201,
+    pregnant                = v213,
+    living_children         = v218,
+    contraceptive           = v313,
+    marital_status          = v501,
+    currently_working       = v714,
+    occupation              = v717,
+    husband_education       = v701,
+    husband_occupation      = v705,
+    reads_newspaper         = v157,
+    listens_radio           = v158,
+    watches_tv              = v159,
+    visited_health_facility = v394,
+    health_insurance        = v481
+  )
+
+names(dhs)
+```
+
+## Identifying Missing Values
+
+```{r missing-check}
+# Count missing values for every column
+colSums(is.na(dhs))
+```
+
+## Handling Missing Values
+
+DHS commonly uses special numeric codes for "missing"/"don't know" instead of
+a blank cell. We convert these to proper `NA` so R treats them correctly.
+
+```{r missing-recode}
+
+colSums(is.na(dhs))
+
+# Let's check the husband_education & husband_occupation
+
+# dhs %>% filter(is.na(husband_education)) %>% dim
+# dhs %>% filter(is.na(husband_education)) %>% view() ### sometimes missingness is a design intent not an error. What can you seen in common in all these women?
+
+# Muted since there are no missing ness.
+# dhs <- dhs %>%
+#   mutate(
+#     age             = na_if(age, 98),
+#     education       = na_if(education, 9),
+#     pregnant        = na_if(pregnant, 9),
+#     living_children = na_if(living_children, 99)
+#   )
+
+
+
+
+
+```
+
+## Removing Duplicate Records
+
+Duplicate records can give a misleading picture of the data by over-weighting
+a small number of respondents.
+
+```{r duplicates}
+# How many caseids appear more than once?
+sum(duplicated(dhs$caseid))
+
+# Inspect the duplicated rows themselves (both occurrences)
+dhs_duplicates <- dhs %>%
+  filter(duplicated(caseid) | duplicated(caseid, fromLast = TRUE))
+
+dhs_duplicates
+
+# Keep only the first occurrence of each caseid
+dhs <- dhs %>% distinct(caseid, .keep_all = TRUE)
+nrow(dhs)
+```
+
+## Recoding Variables
+
+`residence` and `education` are already value-labelled by DHS, so we don't
+need to manually retype their coding scheme -- that comes in the next
+section via `as_factor()`. The one variable that genuinely needs manual
+recoding here is `age_group`, since it's a brand-new category that doesn't
+exist as a raw DHS variable and so has no label to inherit:
+
+```{r recode}
+dhs <- dhs %>%
+  mutate(
+    age_group = case_when(
+      age >= 15 & age < 20  ~ "15-19",
+      age >= 20 & age < 35  ~ "20-34",
+      age >= 35 & age <= 49 ~ "35-49",
+      TRUE ~ NA_character_
+    )
+    # An equivalent (but harder to read for 3+ categories) version with
+    # nested ifelse() would be:
+    # age_group = ifelse(age >= 15 & age < 20, "15-19",
+    #             ifelse(age >= 20 & age < 35, "20-34",
+    #             ifelse(age >= 35 & age <= 49, "35-49", NA)))
+  )
+
+count(dhs, age_group)
+```
+
+## Working with Categorical Variables (Factors)
+
+Because `residence` and `education` are already value-labelled, `as_factor()`
+pulls in DHS's own text labels directly -- no manual mapping required, and no
+risk of a typo creating a mismatched category:
+
+```{r factors}
+dhs <- dhs %>%
+  mutate(
+    residence_f = as_factor(residence),
+    education_f = factor(as_factor(education), ordered = TRUE),
+    age_group_f = factor(age_group, levels = c("15-19", "20-34", "35-49"))
+  )
+
+levels(dhs$residence_f)
+levels(dhs$education_f)
+table(dhs$education_f, useNA = "ifany")
+```
+
+`as_factor()` gives us the categories DHS already defined. Manual recoding
+still earns its keep when you want *different* groupings than the source
+labels provide -- for example, collapsing four education levels down to two
+for a simpler comparison:
+
+```{r factors-collapse}
+dhs <- dhs %>%
+  mutate(
+    education_grouped = fct_collapse(
+      education_f,
+      "No education"      = "No education",
+      "Primary or higher" = c("Primary", "Secondary", "Higher")
+    )
+  )
+
+table(dhs$education_grouped)
+```
+
+## Outlier Detection and Removal
+
+Outliers are values that fall far outside a variable's typical range. Left
+unaddressed, they can distort means, standard deviations, and any models
+built on the data. Two complementary checks are useful:
+
+1. **Validity / range checks** -- for variables with a known plausible range.
+   This survey only interviews women aged 15--49, so any value outside that
+   range is a data error, not a genuine outlier.
+2. **Statistical outlier detection** -- for continuous variables without a
+   fixed valid range (e.g., number of living children), where a rule such as
+   the interquartile range (IQR) flags unusually extreme values.
+
+### Validity check: age
+
+```{r validity-check}
+# This should return 0 rows if age was recorded correctly
+dhs %>% filter(age < 15 | age > 49)
+```
+
+### Statistical outlier detection: living children
+
+```{r outlier-boxplot, fig.width=5, fig.height=4}
+boxplot(dhs$living_children,
+        main = "Number of Living Children",
+        ylab = "Living children",
+        col  = "lightblue")
+```
+
+```{r outlier-iqr}
+Q1      <- quantile(dhs$living_children, 0.25, na.rm = TRUE)
+Q3      <- quantile(dhs$living_children, 0.75, na.rm = TRUE)
+IQR_val <- IQR(dhs$living_children, na.rm = TRUE)
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+c(lower_bound = lower_bound, upper_bound = upper_bound)
+
+# How many observations fall outside these bounds?
+dhs %>%
+  filter(living_children < lower_bound | living_children > upper_bound) %>%
+  nrow()
+```
+
+```{r outlier-flag-remove}
+# Flag outliers rather than silently deleting them, so the decision stays
+# auditable
+dhs <- dhs %>%
+  mutate(
+    living_children_outlier = living_children < lower_bound |
+                               living_children > upper_bound
+  )
+
+table(dhs$living_children_outlier, useNA = "ifany")
+
+# Remove confirmed outliers (missing values were already handled earlier,
+# so we keep NAs rather than dropping them here)
+dhs <- dhs %>%
+  filter(is.na(living_children) | !living_children_outlier)
+```
+
+> **Note:** removing outliers is not always the right choice -- a woman may
+> genuinely have an unusually high number of children. Always inspect
+> flagged cases before deleting them, and document the rule you used.
+
+---
+
+# Data Cleaning -- Part 2
+
+## Objectives
+
+Participants should be able to:
+
+- Create new variables using `mutate()`
+- Select variables using `select()`
+- Filter observations using `filter()`
+- Arrange data using `arrange()`
+- Combine cleaning steps into a single pipeline
+
+## Creating New Variables with `mutate()`
+
+The DHS variable `contraceptive` (originally `v313`) classifies contraceptive
+methods as:
+
+| Code | Method Type |
+|---|---|
+| 0 | No method |
+| 1 | Folkloric |
+| 2 | Traditional |
+| 3 | Modern |
+
+```{r mutate-modern-use}
+dhs <- dhs %>%
+  mutate(modern_use = ifelse(contraceptive == 3, 1, 0))
+
+head(dhs$modern_use)
+```
+
+We also create a media exposure indicator for women exposed to at least one
+media source:
+
+```{r mutate-media}
+dhs <- dhs %>%
+  mutate(
+    media_exposure = ifelse(
+      reads_newspaper > 0 | listens_radio > 0 | watches_tv > 0,
+      "Yes", "No"
+    )
+  )
+
+table(dhs$media_exposure, useNA = "ifany")
+```
+
+## Selecting Variables with `select()`
+
+General syntax:
+
+```r
+data %>% select(variable1, variable2)
+```
+
+**Select a few variables to preview:**
+
+```{r select-preview}
+dhs %>%
+  select(age, education_f, residence_f, modern_use) %>%
+  head()
+```
+
+**Remove variables you no longer need** (e.g., the individual media items,
+once `media_exposure` has been derived from them):
+
+```{r select-remove}
+dhs %>%
+  select(-reads_newspaper, -listens_radio, -watches_tv) %>%
+  names()
+```
+
+**Select by name pattern** -- most useful *before* renaming, directly on the
+raw DHS codes:
+
+```{r select-pattern}
+# Variables starting with "v1"
+dhs_raw %>% select(starts_with("v1")) %>% names()
+
+# Variables ending in "01"
+dhs_raw %>% select(ends_with("01")) %>% names()
+```
+
+## Filtering Observations with `filter()`
+
+General syntax:
+
+```r
+data %>% filter(condition)
+```
+
+```{r filter-examples}
+# Women aged 15-49
+women_15_49 <- dhs %>% filter(age >= 15 & age <= 49)
+
+# Rural women
+rural <- dhs %>% filter(residence == 2)
+
+# Urban women
+urban <- dhs %>% filter(residence == 1)
+
+# Married women
+married <- dhs %>% filter(marital_status == 1)
+
+# Women using a modern contraceptive method
+users <- dhs %>% filter(modern_use == 1)
+
+# Multiple conditions at once: rural, secondary+ education, modern users
+subset_data <- dhs %>%
+  filter(residence == 2, education >= 2, modern_use == 1)
+
+nrow(women_15_49); nrow(rural); nrow(urban); nrow(married); nrow(users); nrow(subset_data)
+```
+
+## Arranging Data with `arrange()`
+
+```{r arrange-examples}
+# Youngest to oldest
+dhs %>% arrange(age) %>% select(caseid, age) %>% head()
+
+# Oldest to youngest
+dhs %>% arrange(desc(age)) %>% select(caseid, age) %>% head()
+```
+
+## Putting It All Together
+
+The steps above were shown one at a time for teaching purposes. In practice,
+you would chain them into a single reproducible pipeline. This recap starts
+again from the **raw, unrenamed** variable selection (`dhs_raw`) and produces
+the final analysis dataset we will use for the rest of this session -- reusing
+the same outlier bounds computed earlier:
+
+```{r full-pipeline}
+analysis_data <- dhs_raw %>%
+  rename(
+    age                = v012,
+    region             = v024,
+    residence          = v025,
+    education          = v106,
+    religion           = v130,
+    wealth_quintile    = v190,
+    children_ever_born = v201,
+    pregnant           = v213,
+    living_children    = v218,
+    contraceptive      = v313,
+    marital_status     = v501,
+    reads_newspaper    = v157,
+    listens_radio      = v158,
+    watches_tv         = v159
+  ) %>%
+  distinct(caseid, .keep_all = TRUE) %>%
+  mutate(
+    residence_f = as_factor(residence),
+    education_f = factor(as_factor(education), ordered = TRUE),
+    age_group_f = factor(case_when(
+                    age >= 15 & age < 20  ~ "15-19",
+                    age >= 20 & age < 35  ~ "20-34",
+                    age >= 35 & age <= 49 ~ "35-49",
+                    TRUE ~ NA_character_),
+                    levels = c("15-19", "20-34", "35-49")),
+    modern_use     = ifelse(contraceptive == 3, 1, 0),
+    media_exposure = ifelse(reads_newspaper > 0 | listens_radio > 0 |
+                               watches_tv > 0, "Yes", "No")
+  ) %>%
+  filter(is.na(living_children) |
+           !(living_children < lower_bound | living_children > upper_bound)) %>%
+  filter(age >= 15 & age <= 49) %>%
+  select(caseid, age, age_group_f, residence_f, education_f, wealth_quintile,
+         region, marital_status, children_ever_born, living_children,
+         modern_use, media_exposure)
+
+glimpse(analysis_data)
+```
+
+`analysis_data` is now our single, clean, analysis-ready dataset. Every
+descriptive statistic from here on uses it.
+
+---
+
+# Descriptive Statistics
+
+## Objectives
+
+Participants should be able to:
+
+- Generate frequencies
+- Calculate means and medians
+- Produce percentages
+- Create summary tables
+
+## Numerical Summaries
+
+```{r numerical-summaries}
+mean(analysis_data$age, na.rm = TRUE)
+median(analysis_data$age, na.rm = TRUE)
+range(analysis_data$age, na.rm = TRUE)
+sd(analysis_data$age, na.rm = TRUE)
+quantile(analysis_data$age, na.rm = TRUE)
+summary(analysis_data$age)
+```
+
+## Frequency Tables
+
+```{r frequency-tables}
+table(analysis_data$education_f)
+table(analysis_data$residence_f)
+table(analysis_data$modern_use)
+```
+
+## Relative Frequencies and Percentages
+
+```{r percentages}
+prop.table(table(analysis_data$education_f))
+
+round(prop.table(table(analysis_data$education_f)) * 100, 1)
+```
+
+## Two-Way Tables
+
+```{r two-way}
+# Education by contraceptive use
+table(analysis_data$education_f, analysis_data$modern_use)
+
+# Row percentages (within each education level)
+round(prop.table(table(analysis_data$education_f,
+                        analysis_data$modern_use), 1) * 100, 1)
+
+# Column percentages (within each contraceptive-use group)
+round(prop.table(table(analysis_data$education_f,
+                        analysis_data$modern_use), 2) * 100, 1)
+```
+
+## Descriptive Statistics Using `dplyr`
+
+```{r dplyr-summary}
+analysis_data %>%
+  summarise(
+    Mean_Age   = mean(age, na.rm = TRUE),
+    Median_Age = median(age, na.rm = TRUE),
+    SD_Age     = sd(age, na.rm = TRUE),
+    Minimum    = min(age, na.rm = TRUE),
+    Maximum    = max(age, na.rm = TRUE)
+  )
+```
+
+## Grouped Summaries
+
+```{r grouped-residence}
+analysis_data %>%
+  group_by(residence_f) %>%
+  summarise(
+    Women      = n(),
+    Mean_Age   = mean(age, na.rm = TRUE),
+    Median_Age = median(age, na.rm = TRUE)
+  )
+```
+
+```{r grouped-education}
+analysis_data %>%
+  group_by(education_f) %>%
+  summarise(
+    Women      = n(),
+    Mean_Age   = mean(age, na.rm = TRUE),
+    Modern_Use = mean(modern_use, na.rm = TRUE) * 100
+  )
+```
+
+```{r grouped-multi}
+analysis_data %>%
+  group_by(residence_f, education_f) %>%
+  summarise(
+    Women      = n(),
+    Mean_Age   = mean(age, na.rm = TRUE),
+    Modern_Use = mean(modern_use, na.rm = TRUE) * 100,
+    .groups = "drop"
+  )
+```
+
+## Simple Summary Tables for Reporting
+
+```{r simple-summary-tables}
+analysis_data %>% count(residence_f)
+analysis_data %>% count(education_f)
+analysis_data %>% count(residence_f, modern_use)
+```
+
+---
+
+# Practical Exercise
+
+Using the Malawi DHS dataset:
+
+1. Import the dataset and select the variables of interest.
+2. Rename variables to meaningful names.
+3. Identify and handle missing values.
+4. Check for and remove duplicate records.
+5. Recode residence, education, and age into meaningful categories, and
+   convert them to factors.
+6. Detect and handle outliers in the number of living children using the
+   IQR method.
+7. Create a binary variable for modern contraceptive use and a media
+   exposure indicator.
+8. Filter the data to women aged 15--49 and select the final variables
+   needed for analysis.
+9. Compute the mean and median age.
+10. Produce frequency tables for education and residence.
+11. Generate a cross-tabulation of education and modern contraceptive use,
+    with row percentages.
+12. Summarize the number of women and mean age by education level using
+    `dplyr`.
+
+---
+
+# Key Takeaways
+
+By the end of this practical, participants should be able to:
+
+- Import and inspect DHS datasets in R
+- Clean and prepare data for analysis
+- Rename and recode variables
+- Handle missing values
+- Detect and handle outliers using visual and statistical methods
+- Create new variables using `mutate()`
+- Filter and select data using `dplyr`
+- Produce descriptive statistics and summary tables
