@@ -7,7 +7,9 @@ output:
     toc: true
     toc_float: true
     number_sections: true
-    theme: journal
+    theme: cosmo
+    highlight: tango
+
 ---
 
 ```{r setup, include=FALSE}
@@ -145,6 +147,17 @@ getwd()
 
 # Importing and Inspecting Data
 
+## Built in datasets
+
+R comes with several datasets under the different libraries. Sometimes the research questions could be answered by some of these datasets.
+
+```{r inbuilt_data}
+# This functions shows you all available datasets under the base function
+
+# data()
+
+```
+
 ## Supported Data Formats
 
 R can read data from many formats, including `.csv`, `.xlsx`, `.sav`, `.dta`,
@@ -156,7 +169,7 @@ that is how the Malawi DHS Individual Recode file is distributed.
 DHS data comes **already value-labelled**: every categorical variable (e.g.,
 `v025` place of residence, `v106` education) carries its numeric code *and*
 a text label at the same time, via haven's `labelled` class. We keep both
-together rather than converting everything to plain factors on import --
+together rather than converting everything to plain factors on import,
 that way we still have the numeric codes available for `na_if()` and other
 numeric checks, but can pull in the ready-made labels with `as_factor()`
 whenever we want them (shown in **Working with Categorical Variables**
@@ -164,6 +177,7 @@ below).
 
 ```{r import-real}
 # Update this path to point to your own DHS extract
+# change these paths to make reference to the directory that has the dataset.
 file_path_dta <- "C:/Users/FRANK/Desktop/R training/DHS_data.dta" 
 file_path_csv<- "C:/Users/FRANK/Desktop/R training/DHS_data.csv"
 
@@ -209,7 +223,7 @@ var_names <- c(
   "v481"    # health insurance coverage
 )
 
-dhs_raw <- dhs_data %>% select(all_of(var_names))
+dhs_raw <- dhs_data %>% select(var_names)
 ```
 
 `v005`, `v021`, and `v022` (the sampling weight, cluster, and strata) are not
