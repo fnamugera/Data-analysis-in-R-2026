@@ -181,16 +181,14 @@ below).
 file_path_dta <- "C:/Users/FRANK/Desktop/R training/DHS_data.dta" 
 file_path_csv<- "C:/Users/FRANK/Desktop/R training/DHS_data.csv"
 
-dhs_data <- read_dta(file_path_dta)%>%
-  mutate(across(where(is.labelled), as_factor))  ### haven and convert values to value labels.
-```
+dhs_data <- read_dta(file_path_dta) 
+dhs_data<- mutate(dhs_data, across(where(is.labelled), as_factor)) 
 
-> **Note:** we deliberately do *not* run
-> `mutate(across(where(is.labelled), as_factor))` here. Doing so immediately
-> would turn every categorical column into text labels straight away, which
-> would break the numeric missing-value recoding (`na_if(education, 9)`,
-> etc.) later in the Data Cleaning section. Converting variable-by-variable,
-> only when we actually need the label, keeps both options available.
+## piping function
+dhs_data <- read_dta(file_path_dta) |>
+  mutate(across(where(is.labelled), as_factor))  ### haven and convert values to value labels.
+
+```
 
 ## Selecting Variables of Interest
 
@@ -221,43 +219,42 @@ var_names <- c(
   "v159",   # watches television
   "v394",   # visited health facility
   "v481"    # health insurance coverage
-)
+  )
 
 dhs_raw <- dhs_data %>% select(var_names)
+
+# other aproaches such as dhs_data[c(var_names)]
 ```
 
 `v005`, `v021`, and `v022` (the sampling weight, cluster, and strata) are not
 used in this session's basic descriptive analysis, but we keep them selected
-now -- they're needed for **survey-weighted analysis**, which is previewed in
-Webinar 2.
+now, they're needed for **survey-weighted analysis**, which is previewed in Webinar 2.
 
 ## First Look at the Data
 
 ```{r inspect}
-dim(dhs_raw)
+dim(dhs_raw);nrow(dhs_raw);ncol(dhs_raw)
+
+# overview
 head(dhs_raw)
+
+
+tail(dhs_raw)
+
+
+names(dhs_raw)
+
+
+## data types
 str(dhs_raw)
+
+
 glimpse(dhs_raw)
+
+## data summary/descriptives
 summary(dhs_raw)
 ```
 
-### Inspecting the Embedded Value Labels
-
-Since this data comes already value-labelled, it's worth checking what
-labels each variable actually carries *before* deciding how to recode it --
-this tells us whether we can use `as_factor()` directly, or whether we still
-need to define labels ourselves.
-
-```{r inspect-labels}
-# Quick look at two key variables
-val_labels(dhs_raw$v025)
-val_labels(dhs_raw$v106)
-
-# A full data-dictionary-style overview of every variable at once
-# look_for(dhs_raw)
-```
-
----
 
 # Data Cleaning -- Part 1
 
@@ -278,7 +275,9 @@ DHS datasets use standardized variable names (e.g., `v012`, `v106`). Renaming
 them up front makes every subsequent step easier to read.
 
 ```{r rename}
-dhs <- dhs_raw %>%
+# shortcut for %>%  is ctr+shift+m %>% 
+
+dhs <- dhs_raw |>
   rename(
     age                     = v012,
     region                  = v024,
@@ -309,12 +308,16 @@ names(dhs)
 
 ```{r missing-check}
 # Count missing values for every column
+# in a single variable:
+sum(is.na(dhs$marital_status))
+
+## overall:
 colSums(is.na(dhs))
 ```
 
 ## Handling Missing Values
 
-DHS commonly uses special numeric codes for "missing"/"don't know" instead of
+DHS commonly uses special numeric codes for "missing" instead of
 a blank cell. We convert these to proper `NA` so R treats them correctly.
 
 ```{r missing-recode}
@@ -323,21 +326,20 @@ colSums(is.na(dhs))
 
 # Let's check the husband_education & husband_occupation
 
-# dhs %>% filter(is.na(husband_education)) %>% dim
-# dhs %>% filter(is.na(husband_education)) %>% view() ### sometimes missingness is a design intent not an error. What can you seen in common in all these women?
+# dhs %>% filter(is.na(husband_education)) |> dim
+
+### sometimes missingness is a design intent not an error. What can you seen in common in all these women?
+
+# dhs %>% filter(is.na(husband_education)) |> view() 
 
 # Muted since there are no missing ness.
-# dhs <- dhs %>%
+# dhs <- dhs |>
 #   mutate(
 #     age             = na_if(age, 98),
 #     education       = na_if(education, 9),
 #     pregnant        = na_if(pregnant, 9),
 #     living_children = na_if(living_children, 99)
 #   )
-
-
-
-
 
 ```
 
@@ -348,16 +350,21 @@ a small number of respondents.
 
 ```{r duplicates}
 # How many caseids appear more than once?
+## use the duplicated() function
+
 sum(duplicated(dhs$caseid))
 
 # Inspect the duplicated rows themselves (both occurrences)
-dhs_duplicates <- dhs %>%
+dhs_duplicates <- dhs |>
   filter(duplicated(caseid) | duplicated(caseid, fromLast = TRUE))
 
+
+dim(dhs_duplicates)
 dhs_duplicates
 
-# Keep only the first occurrence of each caseid
-dhs <- dhs %>% distinct(caseid, .keep_all = TRUE)
+# Keep only one unique occurrence of each caseid
+
+dhs <- dhs |> distinct(caseid, .keep_all = TRUE)
 nrow(dhs)
 ```
 
@@ -370,7 +377,7 @@ recoding here is `age_group`, since it's a brand-new category that doesn't
 exist as a raw DHS variable and so has no label to inherit:
 
 ```{r recode}
-dhs <- dhs %>%
+dhs <- dhs |>
   mutate(
     age_group = case_when(
       age >= 15 & age < 20  ~ "15-19",
@@ -378,6 +385,7 @@ dhs <- dhs %>%
       age >= 35 & age <= 49 ~ "35-49",
       TRUE ~ NA_character_
     )
+    
     # An equivalent (but harder to read for 3+ categories) version with
     # nested ifelse() would be:
     # age_group = ifelse(age >= 15 & age < 20, "15-19",
@@ -391,11 +399,11 @@ count(dhs, age_group)
 ## Working with Categorical Variables (Factors)
 
 Because `residence` and `education` are already value-labelled, `as_factor()`
-pulls in DHS's own text labels directly -- no manual mapping required, and no
+pulls in DHS's own text labels directly, no manual mapping required, and no
 risk of a typo creating a mismatched category:
 
 ```{r factors}
-dhs <- dhs %>%
+dhs <- dhs |>
   mutate(
     residence_f = as_factor(residence),
     education_f = factor(as_factor(education), ordered = TRUE),
@@ -413,7 +421,7 @@ labels provide -- for example, collapsing four education levels down to two
 for a simpler comparison:
 
 ```{r factors-collapse}
-dhs <- dhs %>%
+dhs <- dhs |>
   mutate(
     education_grouped = fct_collapse(
       education_f,
@@ -431,10 +439,10 @@ Outliers are values that fall far outside a variable's typical range. Left
 unaddressed, they can distort means, standard deviations, and any models
 built on the data. Two complementary checks are useful:
 
-1. **Validity / range checks** -- for variables with a known plausible range.
+1. **Validity / range checks**: for variables with a known plausible range.
    This survey only interviews women aged 15--49, so any value outside that
    range is a data error, not a genuine outlier.
-2. **Statistical outlier detection** -- for continuous variables without a
+2. **Statistical outlier detection**: for continuous variables without a
    fixed valid range (e.g., number of living children), where a rule such as
    the interquartile range (IQR) flags unusually extreme values.
 
@@ -473,7 +481,7 @@ dhs %>%
 ```{r outlier-flag-remove}
 # Flag outliers rather than silently deleting them, so the decision stays
 # auditable
-dhs <- dhs %>%
+dhs <- dhs |>
   mutate(
     living_children_outlier = living_children < lower_bound |
                                living_children > upper_bound
@@ -483,7 +491,7 @@ table(dhs$living_children_outlier, useNA = "ifany")
 
 # Remove confirmed outliers (missing values were already handled earlier,
 # so we keep NAs rather than dropping them here)
-dhs <- dhs %>%
+dhs <- dhs |>
   filter(is.na(living_children) | !living_children_outlier)
 ```
 
@@ -518,7 +526,7 @@ methods as:
 | 3 | Modern |
 
 ```{r mutate-modern-use}
-dhs <- dhs %>%
+dhs <- dhs |>
   mutate(modern_use = ifelse(contraceptive == "modern method", "yes", "no"))
 
 head(dhs$modern_use)
@@ -528,7 +536,7 @@ We also create a media exposure indicator for women exposed to at least one
 media source:
 
 ```{r mutate-media}
-dhs <- dhs %>%
+dhs <- dhs |>
   mutate(
     media_exposure = ifelse(
       reads_newspaper != "not at all"  | listens_radio != "not at all" | watches_tv != "not at all",
@@ -544,13 +552,13 @@ table(dhs$media_exposure, useNA = "ifany")
 General syntax:
 
 ```r
-data %>% select(variable1, variable2)
+data |> select(variable1, variable2)
 ```
 
 **Select a few variables to preview:**
 
 ```{r select-preview}
-dhs %>%
+dhs |>
   select(age, education_f, residence_f, modern_use) %>%
   head()
 ```
