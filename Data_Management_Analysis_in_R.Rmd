@@ -444,8 +444,8 @@ dhs <- dhs |>
   mutate(
     education_grouped = fct_collapse(
       education_f,
-      "No education"      = "No education",
-      "Primary or higher" = c("Primary", "Secondary", "Higher")
+      "no education"      = "no education",
+      "Primary or higher" = c("primary", "secondary", "higher")
     )
   )
 

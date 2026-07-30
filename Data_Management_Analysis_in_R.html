@@ -2245,15 +2245,15 @@ education levels down to two for a simpler comparison:</p>
 <span id="cb52-2"><a href="#cb52-2" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
 <span id="cb52-3"><a href="#cb52-3" tabindex="-1"></a>    <span class="at">education_grouped =</span> <span class="fu">fct_collapse</span>(</span>
 <span id="cb52-4"><a href="#cb52-4" tabindex="-1"></a>      education_f,</span>
-<span id="cb52-5"><a href="#cb52-5" tabindex="-1"></a>      <span class="st">&quot;No education&quot;</span>      <span class="ot">=</span> <span class="st">&quot;No education&quot;</span>,</span>
-<span id="cb52-6"><a href="#cb52-6" tabindex="-1"></a>      <span class="st">&quot;Primary or higher&quot;</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;Primary&quot;</span>, <span class="st">&quot;Secondary&quot;</span>, <span class="st">&quot;Higher&quot;</span>)</span>
+<span id="cb52-5"><a href="#cb52-5" tabindex="-1"></a>      <span class="st">&quot;no education&quot;</span>      <span class="ot">=</span> <span class="st">&quot;no education&quot;</span>,</span>
+<span id="cb52-6"><a href="#cb52-6" tabindex="-1"></a>      <span class="st">&quot;Primary or higher&quot;</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;primary&quot;</span>, <span class="st">&quot;secondary&quot;</span>, <span class="st">&quot;higher&quot;</span>)</span>
 <span id="cb52-7"><a href="#cb52-7" tabindex="-1"></a>    )</span>
 <span id="cb52-8"><a href="#cb52-8" tabindex="-1"></a>  )</span>
 <span id="cb52-9"><a href="#cb52-9" tabindex="-1"></a></span>
 <span id="cb52-10"><a href="#cb52-10" tabindex="-1"></a><span class="fu">table</span>(dhs<span class="sc">$</span>education_grouped)</span></code></pre></div>
 <pre><code>## 
-## no education      primary    secondary       higher 
-##         2779        15028         6061          694</code></pre>
+##      no education Primary or higher 
+##              2779             21783</code></pre>
 </div>
 <div id="outlier-detection-and-removal" class="section level2" number="4.8">
 <h2><span class="header-section-number">4.8</span> Outlier Detection and
