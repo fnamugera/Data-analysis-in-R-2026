@@ -190,6 +190,25 @@ dhs_data <- read_dta(file_path_dta) |>
 
 ```
 
+## saving datasets
+Likewise, several formats can be save from R
+
+```{r saving}
+
+# in csv:
+# write.csv(dhs_data, "filename.csv")
+# 
+# # stata
+# write_dta(dhs_data, "filename.dta")
+# 
+# # ssps
+# 
+# write_sav(dhs_data, "filename.sav")
+
+# etc
+
+```
+
 ## Selecting Variables of Interest
 
 ```{r variable-selection}
