@@ -135,12 +135,16 @@ library(tidyverse)   # dplyr, ggplot2, tidyr, stringr, etc.
 library(haven)       # read Stata (.dta) / SPSS (.sav) files -- standard DHS formats
 library(readxl)      # read Excel files
 library(labelled)    # helper functions for labelled survey data
+
+# library(tidyverse) # ctr+enter
 ```
 
 ```{r working-directory}
 # Check and, if needed, set your working directory
-getwd()
-# setwd("path/to/your/project")
+# getwd()
+# # setwd("path/to/your/project")
+# 
+# setwd()
 ```
 
 ---
@@ -155,6 +159,7 @@ R comes with several datasets under the different libraries. Sometimes the resea
 # This functions shows you all available datasets under the base function
 
 # data()
+# ChickWeight
 
 ```
 
@@ -181,16 +186,18 @@ below).
 file_path_dta <- "C:/Users/FRANK/Desktop/R training/DHS_data.dta" 
 file_path_csv<- "C:/Users/FRANK/Desktop/R training/DHS_data.csv"
 
-dhs_data <- read_dta(file_path_dta) 
+dhs_data <- read_dta(file_path_dta) # haven: read_dta
 dhs_data<- mutate(dhs_data, across(where(is.labelled), as_factor)) 
 
-## piping function
+## piping function |>
+
 dhs_data <- read_dta(file_path_dta) |>
   mutate(across(where(is.labelled), as_factor))  ### haven and convert values to value labels.
 
 ```
 
 ## saving datasets
+
 Likewise, several formats can be save from R
 
 ```{r saving}
@@ -201,7 +208,7 @@ Likewise, several formats can be save from R
 # # stata
 # write_dta(dhs_data, "filename.dta")
 # 
-# # ssps
+# # spss
 # 
 # write_sav(dhs_data, "filename.sav")
 
@@ -217,6 +224,7 @@ var_names <- c(
   "v005",   # sampling weight
   "v021",   # primary sampling unit (cluster)
   "v022",   # sampling strata
+  
   "v024",   # region
   "v025",   # place of residence
   "v012",   # age
@@ -240,7 +248,9 @@ var_names <- c(
   "v481"    # health insurance coverage
   )
 
-dhs_raw <- dhs_data %>% select(var_names)
+dhs_raw <- dhs_data |> select(var_names)
+
+# dhs_data|> select(v024, v025, v394) |>View()
 
 # other aproaches such as dhs_data[c(var_names)]
 ```
@@ -252,13 +262,19 @@ now, they're needed for **survey-weighted analysis**, which is previewed in Webi
 ## First Look at the Data
 
 ```{r inspect}
-dim(dhs_raw);nrow(dhs_raw);ncol(dhs_raw)
+# View(dhs_raw)
+
+dim(dhs_raw)
+
+nrow(dhs_raw);
+
+ncol(dhs_raw)
 
 # overview
-head(dhs_raw)
+head(dhs_raw, n = 10)
 
 
-tail(dhs_raw)
+tail(dhs_raw, n = 5)
 
 
 names(dhs_raw)
@@ -272,6 +288,8 @@ glimpse(dhs_raw)
 
 ## data summary/descriptives
 summary(dhs_raw)
+
+summary(dhs_raw |> select(v025, v106))
 ```
 
 
@@ -294,7 +312,11 @@ DHS datasets use standardized variable names (e.g., `v012`, `v106`). Renaming
 them up front makes every subsequent step easier to read.
 
 ```{r rename}
+names(dhs_raw)
+
 # shortcut for %>%  is ctr+shift+m %>% 
+# dhs_raw$age<- dhs_raw$v012
+
 
 dhs <- dhs_raw |>
   rename(
@@ -327,8 +349,16 @@ names(dhs)
 
 ```{r missing-check}
 # Count missing values for every column
+
+# anyNA()
+
+is.na(dhs$marital_status)
+
 # in a single variable:
 sum(is.na(dhs$marital_status))
+
+###
+is.na(dhs)
 
 ## overall:
 colSums(is.na(dhs))
@@ -344,12 +374,13 @@ a blank cell. We convert these to proper `NA` so R treats them correctly.
 colSums(is.na(dhs))
 
 # Let's check the husband_education & husband_occupation
+# subset()
 
-# dhs %>% filter(is.na(husband_education)) |> dim
+# dhs %>% filter(is.na(husband_education)) |> dim()
 
 ### sometimes missingness is a design intent not an error. What can you seen in common in all these women?
 
-# dhs %>% filter(is.na(husband_education)) |> view() 
+# dhs %>% filter(is.na(husband_education)) |> view()
 
 # Muted since there are no missing ness.
 # dhs <- dhs |>
@@ -475,10 +506,13 @@ dhs %>% filter(age < 15 | age > 49)
 ### Statistical outlier detection: living children
 
 ```{r outlier-boxplot, fig.width=5, fig.height=4}
+# dhs$living_children
+
 boxplot(dhs$living_children,
         main = "Number of Living Children",
         ylab = "Living children",
         col  = "lightblue")
+
 ```
 
 ```{r outlier-iqr}
@@ -492,6 +526,7 @@ upper_bound <- Q3 + 1.5 * IQR_val
 c(lower_bound = lower_bound, upper_bound = upper_bound)
 
 # How many observations fall outside these bounds?
+
 dhs %>%
   filter(living_children < lower_bound | living_children > upper_bound) %>%
   nrow()
@@ -505,6 +540,8 @@ dhs <- dhs |>
     living_children_outlier = living_children < lower_bound |
                                living_children > upper_bound
   )
+
+# table()
 
 table(dhs$living_children_outlier, useNA = "ifany")
 
@@ -555,6 +592,13 @@ We also create a media exposure indicator for women exposed to at least one
 media source:
 
 ```{r mutate-media}
+
+# and &
+# a OR b -   |
+
+# a==b
+# a!=b
+
 dhs <- dhs |>
   mutate(
     media_exposure = ifelse(
@@ -600,6 +644,8 @@ dhs_raw %>% select(starts_with("v1")) %>% names()
 
 # Variables ending in "01"
 dhs_raw %>% select(ends_with("01")) %>% names()
+
+# contains()
 ```
 
 ## Filtering Observations with `filter()`
@@ -711,10 +757,15 @@ Participants should be able to:
 
 ```{r numerical-summaries}
 mean(analysis_data$age, na.rm = TRUE)
+
 median(analysis_data$age, na.rm = TRUE)
+
 range(analysis_data$age, na.rm = TRUE)
+
 sd(analysis_data$age, na.rm = TRUE)
+
 quantile(analysis_data$age, na.rm = TRUE)
+
 summary(analysis_data$age)
 ```
 
@@ -722,13 +773,17 @@ summary(analysis_data$age)
 
 ```{r frequency-tables}
 table(analysis_data$education_f)
+
 table(analysis_data$residence_f)
+
 table(analysis_data$modern_use)
 ```
 
 ## Relative Frequencies and Percentages
 
 ```{r percentages}
+# prop.table()
+
 prop.table(table(analysis_data$education_f))
 
 round(prop.table(table(analysis_data$education_f)) * 100, 1)
@@ -801,6 +856,9 @@ analysis_data %>%
 analysis_data %>% count(residence_f)
 analysis_data %>% count(education_f)
 analysis_data %>% count(residence_f, modern_use)
+
+write.csv(analysis_data, "analysis_data.csv")
+saveRDS(analysis_data, "analysis_data.RDS")
 ```
 
 ---
@@ -842,3 +900,364 @@ By the end of this practical, participants should be able to:
 - Create new variables using `mutate()`
 - Filter and select data using `dplyr`
 - Produce descriptive statistics and summary tables
+
+
+## Webinar 2: 27/08/2026
+
+## What We Built in Webinar 1
+
+We cleaned the dataset (`analysis_data`), an analysis-ready extract of the Malawi DHS,
+built around the five principles of quality data i.e. clean, timely, accurate,
+complete, consistent. It contains one row per eligible woman (aged 15--49)
+and these columns:
+
+| Column | Meaning |
+|---|---|
+| `caseid` | Unique respondent identifier |
+| `age` | Age in years |
+| `age_group_f` | Age group (15-19 / 20-34 / 35-49) |
+| `residence_f` | Urban / Rural |
+| `education_f` | No education / Primary / Secondary / Higher (ordered) |
+| `wealth_quintile` | Household wealth quintile (1--5) |
+| `region` | DHS region code |
+| `marital_status` | DHS marital status code |
+| `children_ever_born` | Total children ever born |
+| `living_children` | Number of living children (outlier-checked) |
+| `modern_use` | 1 = currently uses a modern contraceptive method |
+| `media_exposure` | Yes/No, exposed to at least one media source |
+
+## Loading the Cleaned Dataset
+
+```{r now_packages}
+library(tidyverse)   # dplyr, tidyr, ggplot2, etc.
+```
+
+```{r load-data}
+# data_path <- "data/analysis_data_clean.rds"
+# 
+# analysis_data <- readRDS(data_path)
+# 
+# glimpse(analysis_data)
+```
+
+> **If No Webinar 1 file?** Use the CSV version instead:
+> `analysis_data <- readRDS("analysis_data_clean.readRDS")`.
+
+
+# Data Transformation
+
+## Objectives
+
+Participants should be able to:
+
+- Group and summarize data using `group_by()` and `summarise()`
+- Explain the difference between long and wide data formats
+- Reshape data using `pivot_longer()` and `pivot_wider()`
+
+## Grouping and Summarizing with `group_by()` and `summarise()`
+
+Summary by the residence status:
+
+```{r group-summarise-residence}
+analysis_data %>%
+  group_by(residence_f) %>%
+  summarise(
+    women          = n(),
+    mean_age       = mean(age, na.rm = TRUE),
+    modern_use_pct = mean(modern_use, na.rm = TRUE) * 100
+  )
+```
+
+Summarise the education levels dissagregation:
+
+```{r group-summarise-education}
+analysis_data %>%
+  group_by(education_f) %>%
+  summarise(
+    women          = n(),
+    mean_age       = mean(age, na.rm = TRUE),
+    modern_use_pct = mean(modern_use, na.rm = TRUE) * 100
+  )
+```
+
+Grouping by more than one variable at once cross-tabulates automatically:
+
+```{r group-summarise-multi}
+analysis_data %>%
+  group_by(residence_f, education_f) %>%
+  summarise(
+    women          = n(),
+    modern_use_pct = mean(modern_use, na.rm = TRUE) * 100,
+    .groups = "drop"
+  )
+```
+
+## Long and Wide Data Formats
+
+**Wide format** has one row per case and one column per category --
+convenient to read, but awkward for `ggplot2` and most modeling functions.
+**Long format** has one row per observation-variable combination -- what
+most R tools actually expect.
+
+```{r pivot-wide}
+# Wide: one row per residence, one column per education level
+wide_tab <- analysis_data %>%
+  count(residence_f, education_f) %>%
+  pivot_wider(names_from = education_f, values_from = n)
+
+wide_tab
+```
+
+```{r pivot-long}
+# Back to long format
+long_tab <- wide_tab %>%
+  pivot_longer(
+    cols      = -residence_f,
+    names_to  = "education_f",
+    values_to = "n"
+  )
+
+long_tab
+```
+
+---
+
+# Introduction to Visualization
+
+## Objectives
+
+Participants should be able to:
+
+- Explain the grammar of graphics behind `ggplot2`
+- Build a bar chart, histogram, and scatter plot
+
+## The Grammar of Graphics
+
+Every `ggplot2` chart is built from the same layers:
+
+1. **data** -- the data frame you're plotting
+2. **`aes()`** -- maps variables to visual properties (x, y, color, size...)
+3. **`geom_*()`** -- the visual form: bars, points, lines, boxplots...
+4. **`labs()` / `theme()`** -- titles, labels, and styling (covered later)
+
+## Bar Chart: Distribution of a Category
+
+```{r bar-chart}
+ggplot(analysis_data, aes(x = education_f)) +
+  geom_bar(fill = "#00968A") +
+  labs(x = "Education level", y = "Number of women")
+```
+
+## Histogram: Distribution of a Number
+
+```{r histogram}
+ggplot(analysis_data, aes(x = age)) +
+  geom_histogram(binwidth = 5, fill = "#1D80B9", color = "white") +
+  labs(x = "Age", y = "Number of women")
+```
+
+Try a few different `binwidth` values to see how it changes the shape.
+
+## Scatter Plot: Relationship Between Two Numbers
+
+```{r scatter-plot}
+ggplot(analysis_data, aes(x = age, y = children_ever_born)) +
+  geom_point(alpha = 0.4, color = "#8E44AD") +
+  labs(x = "Age", y = "Children ever born")
+```
+
+`alpha` adds transparency, which helps when many points overlap.
+
+## Extra: Boxplot by Group
+
+In Webinar 1 we used base R's `boxplot()` to check for outliers in
+`living_children`. `ggplot2`'s `geom_boxplot()` does the same thing, but
+makes it easy to compare groups side by side:
+
+```{r boxplot-extra}
+ggplot(analysis_data, aes(x = residence_f, y = living_children)) +
+  geom_boxplot(fill = "#E07819", alpha = 0.6) +
+  labs(x = "Residence", y = "Living children")
+```
+
+---
+
+# Basic Statistical Analysis
+
+## Objectives
+
+Participants should be able to:
+
+- Choose between a chi-square test and a t-test for a simple question
+- Run and interpret both tests
+
+## Choosing a Simple Test
+
+- **Two categorical variables** (e.g., residence vs. modern contraceptive
+  use) -> **chi-square test**
+- **One numeric variable across two groups** (e.g., age, urban vs. rural)
+  -> **t-test**
+
+Both return a **p-value**: roughly, the probability of seeing a difference
+this large if there were truly no difference in the population. A common
+(if simplistic) rule of thumb is that p < 0.05 suggests the difference is
+unlikely to be due to chance alone.
+
+## Chi-Square Test: Residence and Modern Contraceptive Use
+
+```{r chi-square}
+tab <- table(analysis_data$residence_f, analysis_data$modern_use)
+tab
+
+chisq.test(tab)
+```
+
+This tests whether modern contraceptive use is **independent** of place of
+residence -- look at the `p-value` in the output.
+
+## T-Test: Age by Residence
+
+```{r t-test}
+t.test(age ~ residence_f, data = analysis_data)
+```
+
+This compares the **mean age** of urban vs. rural women. The output
+includes the mean in each group, a confidence interval for the difference,
+and a p-value. `t.test()` with this formula syntax requires the grouping
+variable to have exactly two levels -- which `residence_f` does
+(Urban/Rural).
+
+---
+
+# Customizing and Saving Charts
+
+## Objectives
+
+Participants should be able to:
+
+- Add titles, axis labels, and themes to a `ggplot2` chart
+- Save a chart as a high-resolution image file
+
+## Titles, Labels, and Themes
+
+- `labs()` -- add a title, subtitle, axis labels, and caption
+- `theme_minimal()`, `theme_classic()`, `theme_bw()` -- quick built-in style
+  presets
+- `theme()` -- fine-grained control (font sizes, legend position, etc.)
+
+A well-labeled chart should be understandable without needing to read the
+surrounding report text.
+
+```{r customized-chart}
+p <- ggplot(analysis_data, aes(x = education_f, fill = residence_f)) +
+  geom_bar(position = "dodge") +
+  labs(
+    title    = "Education Level by Place of Residence",
+    subtitle = "Malawi DHS, women aged 15-49",
+    x        = "Education level",
+    y        = "Number of women",
+    fill     = "Residence"
+  ) +
+  theme_minimal()
+
+p
+```
+
+## Saving a Chart with `ggsave()`
+
+```{r save-chart, eval=FALSE}
+ggsave("output/education_by_residence.png",
+       plot = p, width = 7, height = 5, dpi = 300)
+```
+
+`ggsave()` picks the file format from the extension you give it (`.png`,
+`.pdf`, `.jpg`, ...), and by default saves the *last* plot displayed if you
+don't pass `plot = `.
+
+---
+
+# Exporting Results and Reproducible Workflow
+
+## Objectives
+
+Participants should be able to:
+
+- Export a summary table to `.csv`
+- Organize a project so the whole analysis can be re-run from scratch
+
+## Exporting Result Tables
+
+```{r export-table, eval=FALSE}
+summary_table <- analysis_data %>%
+  group_by(residence_f, education_f) %>%
+  summarise(
+    women          = n(),
+    mean_age       = mean(age, na.rm = TRUE),
+    modern_use_pct = mean(modern_use, na.rm = TRUE) * 100,
+    .groups = "drop"
+  )
+
+write_csv(summary_table, "output/summary_by_residence_education.csv")
+```
+
+Export anything you would otherwise have to recompute -- exactly the same
+habit as saving `analysis_data_clean.csv` at the end of Webinar 1.
+
+## Organizing a Reproducible Project
+
+A reproducible workflow means anyone (including future you) can re-run your
+script from top to bottom and get the exact same results:
+
+```
+R_Training/
+|
+|-- data/
+|   |-- DHS_data.dta
+|   `-- analysis_data_clean.rds
+|
+|-- scripts/
+|   |-- Workshop1_DHS_DataCleaning.Rmd
+|   `-- Workshop2_Transformation_Visualization.Rmd
+|
+`-- output/
+    |-- summary_by_residence_education.csv
+    `-- education_by_residence.png
+```
+
+- Keep raw data, scripts, and outputs in separate, clearly named folders
+- Never edit raw data files by hand -- only through your script
+- Write scripts to run top-to-bottom without manual steps in between
+- Export every result you'll need again as its own file
+
+---
+
+# Practical Exercise
+
+Using `analysis_data`:
+
+1. Group by `education_f` and compute the number of women and the mean
+   number of living children in each group.
+2. Create a wide table of `age_group_f` by `residence_f` counts, then
+   convert it back to long format.
+3. Build a histogram of `wealth_quintile`.
+4. Build a bar chart of `marital_status`, with bars filled by `residence_f`.
+5. Run a chi-square test of `education_f` against `modern_use`.
+6. Run a t-test comparing `age` between women with and without media
+   exposure (`media_exposure`).
+7. Add a title, axis labels, and a theme to one of your charts, then save
+   it with `ggsave()`.
+8. Export your Step 1 summary table to `output/` as a `.csv` file.
+
+
+# Key Takeaways
+
+By the end of this practical, participants should be able to:
+
+- Reload a cleaned dataset instead of repeating the cleaning pipeline
+- Group and summarize data with `group_by()` and `summarise()`
+- Reshape data between long and wide formats
+- Build and interpret bar charts, histograms, scatter plots, and boxplots
+  with `ggplot2`
+- Run and interpret a chi-square test and a t-test
+- Customize and save publication-ready charts
+- Export result tables and organize a reproducible project
