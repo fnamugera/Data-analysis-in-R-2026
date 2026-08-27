@@ -352,16 +352,16 @@ names(dhs)
 
 # anyNA()
 
-is.na(dhs$marital_status)
+# is.na(dhs$marital_status)
 
 # in a single variable:
 sum(is.na(dhs$marital_status))
 
 ###
-is.na(dhs)
+# is.na(dhs)
 
 ## overall:
-colSums(is.na(dhs))
+# colSums(is.na(dhs))
 ```
 
 ## Handling Missing Values
@@ -1114,7 +1114,7 @@ Try a few different `binwidth` values to see how it changes the shape.
 ```{r scatter-plot2}
 ggplot(analysis_data, aes(x = age, y = children_ever_born)) +
   geom_point(alpha = 0.4, color = "blue") +
-  geom_smooth()+
+  geom_smooth(color = "red")+
   labs(x = "Age", y = "Children ever born")
 
 # Let's color by FP use:
