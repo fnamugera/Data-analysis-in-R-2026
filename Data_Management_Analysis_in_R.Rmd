@@ -902,7 +902,9 @@ By the end of this practical, participants should be able to:
 - Produce descriptive statistics and summary tables
 
 
-## Webinar 2: 27/08/2026
+# Webinar 2: 27/08/2026
+
+We continue with our research question from Webinar 1. Which factors influence family planning use among Women in reproductive age in Malawi.
 
 ## What We Built in Webinar 1
 
@@ -956,22 +958,34 @@ Participants should be able to:
 
 ## Grouping and Summarizing with `group_by()` and `summarise()`
 
-Summary by the residence status:
+Summary by the residence status and modern_use:
 
 ```{r group-summarise-residence}
 analysis_data %>%
-  group_by(residence_f) %>%
+  group_by(residence_f, modern_use) %>%
   summarise(
     women          = n(),
-    mean_age       = mean(age, na.rm = TRUE),
-    modern_use_pct = mean(modern_use, na.rm = TRUE) * 100
-  )
+    mean_age       = mean(age, na.rm = TRUE)
+  ) 
+
+
+# Let's add proportions:
+
+analysis_data %>%
+  group_by(residence_f, modern_use) %>%
+  summarise(
+    women          = n(),
+    mean_age       = mean(age, na.rm = TRUE)) %>% group_by(residence_f) %>% 
+  mutate(percentage = round(women/sum(women)*100))
+
 ```
 
 Summarise the education levels dissagregation:
 
 ```{r group-summarise-education}
-analysis_data %>%
+# coarse modern_use to binary/numeric
+
+analysis_data %>% mutate(modern_use = ifelse(modern_use=="yes", 1, 0)) %>% 
   group_by(education_f) %>%
   summarise(
     women          = n(),
@@ -983,7 +997,7 @@ analysis_data %>%
 Grouping by more than one variable at once cross-tabulates automatically:
 
 ```{r group-summarise-multi}
-analysis_data %>%
+analysis_data %>% mutate(modern_use = ifelse(modern_use=="yes", 1, 0)) %>% 
   group_by(residence_f, education_f) %>%
   summarise(
     women          = n(),
@@ -992,6 +1006,8 @@ analysis_data %>%
   )
 ```
 
+
+
 ## Long and Wide Data Formats
 
 **Wide format** has one row per case and one column per category --
@@ -999,14 +1015,19 @@ convenient to read, but awkward for `ggplot2` and most modeling functions.
 **Long format** has one row per observation-variable combination -- what
 most R tools actually expect.
 
+### wide formart
+
 ```{r pivot-wide}
 # Wide: one row per residence, one column per education level
 wide_tab <- analysis_data %>%
   count(residence_f, education_f) %>%
   pivot_wider(names_from = education_f, values_from = n)
 
-wide_tab
+wide_tab %>% head()
 ```
+
+
+### Long formart
 
 ```{r pivot-long}
 # Back to long format
@@ -1017,10 +1038,9 @@ long_tab <- wide_tab %>%
     values_to = "n"
   )
 
-long_tab
+long_tab %>% head()
 ```
 
----
 
 # Introduction to Visualization
 
@@ -1042,17 +1062,48 @@ Every `ggplot2` chart is built from the same layers:
 
 ## Bar Chart: Distribution of a Category
 
+Education level overall:
+
 ```{r bar-chart}
 ggplot(analysis_data, aes(x = education_f)) +
-  geom_bar(fill = "#00968A") +
-  labs(x = "Education level", y = "Number of women")
+  geom_bar(fill = "#00968A", width = .4) +
+  labs(x = "Education level", y = "Number of women") #+  
+  # geom_text(
+  #   stat = "count",
+  #   aes(label = after_stat(count)),
+  #   vjust = -0.3
+  # )
+# +   theme_bw() + theme() + geom_text + scale_y_continuous
+```
+
+Incoporate modern contraceptive use:
+
+```{r bar-chart2}
+analysis_data %>% group_by(education_f , modern_use) %>% summarise(n=n()) %>% 
+ggplot(aes(x = education_f, y = n, fill = modern_use)) +
+  geom_bar(width = .4, stat = "identity", width = .4) +
+  labs(x = "Education level", y = "Number of women") # +
+
+# Or change 
+
+analysis_data %>% group_by(education_f , modern_use) %>% summarise(n=n()) %>% 
+ggplot(aes(x = education_f, y = n, fill = modern_use)) +
+  geom_bar(width = .4, stat = "identity", width = .4, position = position_dodge(width = .4)) +
+  labs(x = "Education level", y = "Number of women") # +
+  
+# geom_text(
+  #   stat = "count",
+  #   aes(label = after_stat(count)),
+  #   vjust = -0.3
+  # )
+# +   theme_bw() + theme() + geom_text + scale_y_continuous
 ```
 
 ## Histogram: Distribution of a Number
 
 ```{r histogram}
 ggplot(analysis_data, aes(x = age)) +
-  geom_histogram(binwidth = 5, fill = "#1D80B9", color = "white") +
+  geom_histogram(binwidth = 5,  fill = "#1D80B9", color = "white") +
   labs(x = "Age", y = "Number of women")
 ```
 
@@ -1060,10 +1111,17 @@ Try a few different `binwidth` values to see how it changes the shape.
 
 ## Scatter Plot: Relationship Between Two Numbers
 
-```{r scatter-plot}
+```{r scatter-plot2}
 ggplot(analysis_data, aes(x = age, y = children_ever_born)) +
-  geom_point(alpha = 0.4, color = "#8E44AD") +
+  geom_point(alpha = 0.4, color = "blue") +
+  geom_smooth()+
   labs(x = "Age", y = "Children ever born")
+
+# Let's color by FP use:
+# ggplot(analysis_data, aes(x = age, y = children_ever_born)) +
+#   geom_point(alpha = 0.4, aes(color = modern_use)) +
+#   geom_smooth()+
+#   labs(x = "Age", y = "Children ever born")
 ```
 
 `alpha` adds transparency, which helps when many points overlap.
@@ -1080,7 +1138,16 @@ ggplot(analysis_data, aes(x = residence_f, y = living_children)) +
   labs(x = "Residence", y = "Living children")
 ```
 
----
+
+####  marital_status Vs age
+
+```{r boxplot-extra2}
+ggplot(analysis_data, aes(x = marital_status, y = age, fill= marital_status)) +
+  geom_boxplot( alpha = 0.6) + # or  , show.legend = F
+  labs(x = "Residence", y = "Living children")+
+  theme(legend.position = "bottom")
+```
+
 
 # Basic Statistical Analysis
 
@@ -1113,7 +1180,7 @@ chisq.test(tab)
 ```
 
 This tests whether modern contraceptive use is **independent** of place of
-residence -- look at the `p-value` in the output.
+residence, look at the `p-value` in the output.
 
 ## T-Test: Age by Residence
 
@@ -1124,10 +1191,9 @@ t.test(age ~ residence_f, data = analysis_data)
 This compares the **mean age** of urban vs. rural women. The output
 includes the mean in each group, a confidence interval for the difference,
 and a p-value. `t.test()` with this formula syntax requires the grouping
-variable to have exactly two levels -- which `residence_f` does
+variable to have exactly two levels, which `residence_f` does
 (Urban/Rural).
 
----
 
 # Customizing and Saving Charts
 
@@ -1141,9 +1207,9 @@ Participants should be able to:
 ## Titles, Labels, and Themes
 
 - `labs()` -- add a title, subtitle, axis labels, and caption
-- `theme_minimal()`, `theme_classic()`, `theme_bw()` -- quick built-in style
+- `theme_minimal()`, `theme_classic()`, `theme_bw()` quick built-in style
   presets
-- `theme()` -- fine-grained control (font sizes, legend position, etc.)
+- `theme()` fine-grained control (font sizes, legend position, etc.)
 
 A well-labeled chart should be understandable without needing to read the
 surrounding report text.
@@ -1174,7 +1240,6 @@ ggsave("output/education_by_residence.png",
 `.pdf`, `.jpg`, ...), and by default saves the *last* plot displayed if you
 don't pass `plot = `.
 
----
 
 # Exporting Results and Reproducible Workflow
 
@@ -1217,7 +1282,7 @@ R_Training/
 |
 |-- scripts/
 |   |-- Workshop1_DHS_DataCleaning.Rmd
-|   `-- Workshop2_Transformation_Visualization.Rmd
+| 
 |
 `-- output/
     |-- summary_by_residence_education.csv
@@ -1229,7 +1294,6 @@ R_Training/
 - Write scripts to run top-to-bottom without manual steps in between
 - Export every result you'll need again as its own file
 
----
 
 # Practical Exercise
 
