@@ -25345,11 +25345,16 @@ and by default saves the <em>last</em> plot displayed if you don’t pass
 <code>plot =</code>.</p>
 </div>
 </div>
-<div id="exporting-results-and-reproducible-workflow" class="section level1" number="14">
-<h1><span class="header-section-number">14</span> Exporting Results and
+<div id="regression-analysis" class="section level1" number="14">
+<h1><span class="header-section-number">14</span> Regression
+Analysis</h1>
+<p>This looks at the factors jointly.</p>
+</div>
+<div id="exporting-results-and-reproducible-workflow" class="section level1" number="15">
+<h1><span class="header-section-number">15</span> Exporting Results and
 Reproducible Workflow</h1>
-<div id="objectives-7" class="section level2" number="14.1">
-<h2><span class="header-section-number">14.1</span> Objectives</h2>
+<div id="objectives-7" class="section level2" number="15.1">
+<h2><span class="header-section-number">15.1</span> Objectives</h2>
 <p>Participants should be able to:</p>
 <ul>
 <li>Export a summary table to <code>.csv</code></li>
@@ -25357,8 +25362,8 @@ Reproducible Workflow</h1>
 scratch</li>
 </ul>
 </div>
-<div id="exporting-result-tables" class="section level2" number="14.2">
-<h2><span class="header-section-number">14.2</span> Exporting Result
+<div id="exporting-result-tables" class="section level2" number="15.2">
+<h2><span class="header-section-number">15.2</span> Exporting Result
 Tables</h2>
 <div class="sourceCode" id="cb175"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb175-1"><a href="#cb175-1" tabindex="-1"></a>summary_table <span class="ot">&lt;-</span> analysis_data <span class="sc">%&gt;%</span></span>
 <span id="cb175-2"><a href="#cb175-2" tabindex="-1"></a>  <span class="fu">group_by</span>(residence_f, education_f) <span class="sc">%&gt;%</span></span>
@@ -25374,8 +25379,8 @@ Tables</h2>
 same habit as saving <code>analysis_data_clean.csv</code> at the end of
 Webinar 1.</p>
 </div>
-<div id="organizing-a-reproducible-project" class="section level2" number="14.3">
-<h2><span class="header-section-number">14.3</span> Organizing a
+<div id="organizing-a-reproducible-project" class="section level2" number="15.3">
+<h2><span class="header-section-number">15.3</span> Organizing a
 Reproducible Project</h2>
 <p>A reproducible workflow means anyone (including future you) can
 re-run your script from top to bottom and get the exact same
@@ -25403,8 +25408,8 @@ between</li>
 </ul>
 </div>
 </div>
-<div id="practical-exercise-1" class="section level1" number="15">
-<h1><span class="header-section-number">15</span> Practical
+<div id="practical-exercise-1" class="section level1" number="16">
+<h1><span class="header-section-number">16</span> Practical
 Exercise</h1>
 <p>Using <code>analysis_data</code>:</p>
 <ol style="list-style-type: decimal">
@@ -25426,8 +25431,8 @@ save it with <code>ggsave()</code>.</li>
 <code>.csv</code> file.</li>
 </ol>
 </div>
-<div id="key-takeaways-1" class="section level1" number="16">
-<h1><span class="header-section-number">16</span> Key Takeaways</h1>
+<div id="key-takeaways-1" class="section level1" number="17">
+<h1><span class="header-section-number">17</span> Key Takeaways</h1>
 <p>By the end of this practical, participants should be able to:</p>
 <ul>
 <li>Reload a cleaned dataset instead of repeating the cleaning

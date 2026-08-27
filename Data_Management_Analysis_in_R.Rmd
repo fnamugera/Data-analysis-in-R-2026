@@ -1240,6 +1240,10 @@ ggsave("output/education_by_residence.png",
 `.pdf`, `.jpg`, ...), and by default saves the *last* plot displayed if you
 don't pass `plot = `.
 
+# Regression Analysis
+
+This looks at the factors jointly.
+
 
 # Exporting Results and Reproducible Workflow
 
